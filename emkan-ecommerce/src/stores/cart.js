@@ -31,15 +31,19 @@ export const useCartStore = defineStore("cart", () => {
     isDiscounted = false
   ) => {
     try {
-      // لا حاجة للتحقق المحلي هنا، الباك اند سيقوم بذلك ويعيد السلة المحدثة
       const res = await axios.post(
         "http://localhost:5000/api/cart/add",
-        { productId, quantity, price, isDiscounted }, // Send price and isDiscounted
+        { productId, quantity, price, isDiscounted },
         { withCredentials: true }
       );
-      cart.value = res.data.items;
+      cart.value = res.data.items || res.data.cart?.items || [];
+      return {
+        success: true,
+        message: res.data.message || "تمت الإضافة بنجاح",
+      };
     } catch (err) {
       error.value = err.response?.data?.message || err.message;
+      return { success: false, message: error.value };
     }
   };
 
@@ -112,7 +116,8 @@ export const useCartStore = defineStore("cart", () => {
           price: item.price,
           name: item.product.name,
           image: item.product.imageCover,
-          isDiscounted: typeof item.isDiscounted === 'boolean' ? item.isDiscounted : false, // حماية إضافية
+          isDiscounted:
+            typeof item.isDiscounted === "boolean" ? item.isDiscounted : false, // حماية إضافية
         })),
         totalAmount: total.value, // Use the computed total
         paymentMethod: "bank_transfer",

@@ -249,6 +249,27 @@
         >
       </div>
     </transition>
+
+    <!-- Toast Notifications -->
+    <transition name="fade-pop">
+      <div
+        v-if="showToast"
+        class="fixed z-[9999] top-20 left-1/2 -translate-x-1/2 px-4 py-3 sm:px-8 sm:py-5 flex items-center gap-2 sm:gap-3 animate-popup-success min-w-[180px] max-w-[90vw] sm:max-w-fit text-xs sm:text-lg rounded-2xl shadow-2xl border"
+        :class="
+          toastType === 'error'
+            ? 'bg-red-50 border-red-300 text-red-700'
+            : 'bg-green-50 border-green-300 text-green-700'
+        "
+        style="max-width: 90vw"
+      >
+        <font-awesome-icon
+          :icon="toastType === 'error' ? 'circle-xmark' : 'circle-check'"
+          :class="toastType === 'error' ? 'text-red-500' : 'text-green-500'"
+          class="text-xl sm:text-2xl"
+        />
+        <span class="font-bold truncate">{{ toastMessage }}</span>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -272,6 +293,9 @@ const authStore = useAuthStore();
 const productsStore = useProductsStore();
 const showAddedPopup = ref(false);
 const addedProductName = ref("");
+const showToast = ref(false);
+const toastMessage = ref("");
+const toastType = ref("success");
 
 const discountedProducts = computed(() =>
   productsStore.products.filter(
@@ -291,9 +315,7 @@ const availableQuantity = (product) => {
     inCart = cartStore.cartItems
       .filter((item) => {
         const itemProductId = item.product?._id || item.productId || item._id;
-        return (
-          itemProductId === product._id && !!item.isDiscounted
-        );
+        return itemProductId === product._id && !!item.isDiscounted;
       })
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
   }
@@ -310,7 +332,16 @@ function openPopup(product) {
   quantity.value = 1;
 }
 
-function addToCart(product, qty) {
+function triggerToast(message, type = "success") {
+  toastMessage.value = message;
+  toastType.value = type;
+  showToast.value = true;
+  setTimeout(() => {
+    showToast.value = false;
+  }, 3000);
+}
+
+async function addToCart(product, qty) {
   if (!authStore.isLoggedIn) {
     window.location.href = "/login";
     return;
@@ -319,19 +350,31 @@ function addToCart(product, qty) {
   // تحقق إضافي قبل الإرسال: لا تسمح بإضافة أكثر من الكمية المتاحة
   const maxQty = availableQuantity(product);
   if (qty > maxQty) {
-    alert(`لا يمكن إضافة أكثر من الكمية المتاحة (${maxQty}) لهذا المنتج.`);
+    triggerToast(
+      `لا يمكن إضافة أكثر من الكمية المتاحة (${maxQty}) لهذا المنتج.`,
+      "error"
+    );
     return;
   }
   const price = product.price * (1 - (product.offer?.discountValue || 0) / 100);
   // Pass isDiscounted: true explicitly for discounted products
-  cartStore.addToCart(product._id, qty, price, true);
-  selectedProduct.value = null;
-  quantity.value = 1;
-  addedProductName.value = product.name;
-  showAddedPopup.value = true;
-  setTimeout(() => {
-    showAddedPopup.value = false;
-  }, 1800);
+  const result = await cartStore.addToCart(product._id, qty, price, true);
+  if (result && result.success === true) {
+    selectedProduct.value = null;
+    quantity.value = 1;
+    addedProductName.value = product.name;
+    showAddedPopup.value = true;
+    setTimeout(() => {
+      showAddedPopup.value = false;
+    }, 1800);
+  } else {
+    triggerToast(
+      result && result.message
+        ? result.message
+        : "حدث خطأ أثناء إضافة المنتج للسلة",
+      "error"
+    );
+  }
 }
 </script>
 

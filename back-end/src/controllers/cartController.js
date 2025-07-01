@@ -52,7 +52,8 @@ export const addToCart = async (req, res) => {
       product.offer.discountQuantity > 0
     ) {
       // الكمية المتاحة فقط من الكمية المخفضة
-      available = product.offer.discountQuantity - (product.reserved || 0);
+      available =
+        product.offer.discountQuantity - (product.offer.discountReserved || 0);
     } else {
       // الكمية المتاحة فقط من الكمية الأصلية
       available = (product.quantity || 0) - (product.reserved || 0);
@@ -72,7 +73,9 @@ export const addToCart = async (req, res) => {
       (existingItem ? existingItem.quantity : 0) + quantity;
     if (totalRequested > available) {
       return res.status(400).json({
+        success: false,
         message: `الكمية المطلوبة (${totalRequested}) غير متوفرة لهذا المنتج. الكمية المتاحة: ${available}`,
+        items: cart.items,
       });
     }
 
@@ -88,14 +91,27 @@ export const addToCart = async (req, res) => {
         originalPrice: originalPrice,
       });
     }
-
     await cart.save();
+
+    // تحديث الحجز في المنتج بشكل آمن
+    const updateQuery = {};
+    if (finalIsDiscounted && product.offer && product.offer.active) {
+      updateQuery["$inc"] = { "offer.discountReserved": quantity };
+    } else {
+      updateQuery["$inc"] = { reserved: quantity };
+    }
+    await Product.findByIdAndUpdate(productId, updateQuery);
 
     // Populate product details before sending response
     await cart.populate("items.product");
-    res.json(cart);
+    res.json({
+      success: true,
+      items: cart.items,
+      message: "تمت الإضافة بنجاح",
+    });
   } catch (err) {
     res.status(500).json({
+      success: false,
       message: "خطأ في إضافة المنتج للسلة",
       error: err.message,
     });
@@ -115,6 +131,17 @@ export const removeFromCart = async (req, res) => {
     );
 
     if (itemIndex > -1) {
+      const item = cart.items[itemIndex];
+      const product = await Product.findById(item.product);
+      if (product) {
+        const updateQuery = {};
+        if (item.isDiscounted) {
+          updateQuery["$inc"] = { "offer.discountReserved": -item.quantity };
+        } else {
+          updateQuery["$inc"] = { reserved: -item.quantity };
+        }
+        await Product.findByIdAndUpdate(item.product, updateQuery);
+      }
       cart.items.splice(itemIndex, 1); // Remove the item by index
     } else {
       return res.status(404).json({ message: "العنصر غير موجود في السلة" });
@@ -147,23 +174,46 @@ export const updateCartItem = async (req, res) => {
     }
 
     const item = cart.items[itemIndex];
+    const originalQuantity = item.quantity;
     const product = await Product.findById(item.product);
     if (!product) {
       return res.status(404).json({ message: "المنتج غير موجود" });
     }
 
     if (quantity <= 0) {
+      const updateQuery = {};
+      if (item.isDiscounted) {
+        updateQuery["$inc"] = { "offer.discountReserved": -originalQuantity };
+      } else {
+        updateQuery["$inc"] = { reserved: -originalQuantity };
+      }
+      await Product.findByIdAndUpdate(item.product, updateQuery);
       cart.items.splice(itemIndex, 1);
     } else {
-      // احسب الفرق
-      const diff = quantity - item.quantity;
-      // نقارن الكمية الجديدة الكلية المطلوبة في السلة مع الكمية الكلية للمنتج
-      if (quantity > (product.quantity || 0)) {
+      const diff = quantity - originalQuantity;
+      let available;
+      if (item.isDiscounted && product.offer && product.offer.active) {
+        available =
+          product.offer.discountQuantity -
+          (product.offer.discountReserved || 0);
+      } else {
+        available = product.quantity - (product.reserved || 0);
+      }
+
+      if (diff > available) {
         return res.status(400).json({
-          message: `الكمية المطلوبة (${quantity}) غير متوفرة لهذا المنتج. الكمية الكلية في المخزون: ${product.quantity}`,
+          message: `الكمية المطلوبة (${diff}) غير متوفرة. الكمية المتاحة: ${available}`,
         });
       }
-      cart.items[itemIndex].quantity = quantity;
+
+      const updateQuery = {};
+      if (item.isDiscounted) {
+        updateQuery["$inc"] = { "offer.discountReserved": diff };
+      } else {
+        updateQuery["$inc"] = { reserved: diff };
+      }
+      await Product.findByIdAndUpdate(item.product, updateQuery);
+      item.quantity = quantity;
     }
 
     await cart.save();

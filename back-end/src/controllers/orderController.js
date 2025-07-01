@@ -97,7 +97,7 @@ export const createOrder = async (req, res) => {
         image: currentProductState.imageCover,
         price: item.price,
         quantity: item.quantity,
-        isDiscounted: isActuallyDiscounted,
+        isDiscounted: item.isDiscounted, // استخدم القيمة من السلة مباشرة
       });
 
       if (isActuallyDiscounted) {
@@ -133,9 +133,9 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    if (bulkUpdateOperations.length > 0) {
-      await Product.bulkWrite(bulkUpdateOperations);
-    }
+    // if (bulkUpdateOperations.length > 0) {
+    //   await Product.bulkWrite(bulkUpdateOperations);
+    // }
 
     const order = await Order.create({
       user: userId,
@@ -183,59 +183,27 @@ export const approveOrder = async (req, res) => {
     await order.save();
 
     for (const item of order.items) {
-      const product = await Product.findById(item.product._id || item.product);
+      const toDeduct = item.quantity;
+      const product = await Product.findById(item.product._id);
       if (!product) continue;
 
-      console.log(
-        `Processing product: ${product.name}, Item ID: ${item._id}, Is Discounted: ${item.isDiscounted}`
-      );
-      if (product.offer) {
-        console.log(
-          `Initial product offer state for ${product.name}: quantity=${product.offer.discountQuantity}, reserved=${product.offer.discountReserved}, active=${product.offer.active}`
+      if (item.isDiscounted) {
+        // بيع مخفض: خصم من discountQuantity و discountReserved فقط
+        product.offer.discountQuantity = Math.max(
+          0,
+          (product.offer.discountQuantity || 0) - toDeduct
         );
-      } else {
-        console.log(`Product ${product.name} has no offer object.`);
-      }
-      console.log(`Item quantity for ${product.name}: ${item.quantity}`);
-
-      if (item.isDiscounted && product.offer && product.offer.active) {
-        console.log(`Applying discount logic for ${product.name}`);
-        const toDeduct = item.quantity;
-
-        console.log(
-          `Before discount: DQ=${product.offer.discountQuantity}, DR=${product.offer.discountReserved}`
+        product.offer.discountReserved = Math.max(
+          0,
+          (product.offer.discountReserved || 0) - toDeduct
         );
-        if (product.offer.discountQuantity >= toDeduct) {
-          product.offer.discountQuantity -= toDeduct;
-        } else {
-          product.offer.discountQuantity = 0;
-        }
-
-        if (product.offer.discountReserved >= toDeduct) {
-          product.offer.discountReserved -= toDeduct;
-        } else {
-          product.offer.discountReserved = 0;
-        }
-        console.log(
-          `After discount: DQ=${product.offer.discountQuantity}, DR=${product.offer.discountReserved}`
-        );
-
         product.markModified("offer");
-        await product.save();
-        console.log(`Product ${product.name} offer saved.`);
       } else {
-        console.log(
-          `Skipping discount logic for ${product.name}. isDiscounted=${
-            item.isDiscounted
-          }, offerExists=${!!product.offer}, offerActive=${
-            product.offer?.active
-          }`
-        );
-        const toDeduct = Math.min(product.reserved || 0, item.quantity);
+        // بيع عادي: خصم من quantity و reserved فقط
         product.quantity = Math.max(0, (product.quantity || 0) - toDeduct);
         product.reserved = Math.max(0, (product.reserved || 0) - toDeduct);
-        await product.save();
       }
+      await product.save();
     }
 
     try {
@@ -251,55 +219,44 @@ export const approveOrder = async (req, res) => {
 
 export const cancelOrder = async (req, res) => {
   try {
-    const { orderId, byAdmin } = req.body;
-    const order = await Order.findById(orderId).populate("items.product"); // Populate product details
-    if (!order) return res.status(404).json({ message: "الطلب غير موجود" });
-    if (
-      order.status === "cancelled_by_user" ||
-      order.status === "cancelled_by_admin"
-    ) {
-      return res.status(400).json({ message: "تم إلغاء الطلب مسبقاً" });
+    const { orderId } = req.body;
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "الطلب غير موجود" });
     }
 
-    for (const item of order.items) {
-      const product = item.product; // Product is already populated
-      if (!product) continue;
+    if (order.status !== "awaiting_review") {
+      return res
+        .status(400)
+        .json({ message: "لا يمكن إلغاء هذا الطلب في حالته الحالية" });
+    }
 
-      if (byAdmin) {
-        // إلغاء من الأدمن: تصفير الحجوزات فقط
-        if (item.isDiscounted && product.offer && product.offer.active) {
-          product.offer.discountReserved = 0;
-          product.markModified("offer");
-        } else {
-          product.reserved = 0;
-        }
-        // لا يتم إرجاع الكمية إلى المخزون في حالة إلغاء الأدمن
+    const bulkUpdateOperations = order.items.map((item) => {
+      const incUpdate = {};
+      if (item.isDiscounted) {
+        incUpdate["offer.discountReserved"] = -item.quantity;
       } else {
-        // إلغاء من المستخدم: إرجاع الكميات المحجوزة للمخزون وتحديث الحجوزات
-        if (item.isDiscounted && product.offer && product.offer.active) {
-          product.offer.discountQuantity =
-            (product.offer.discountQuantity || 0) + item.quantity;
-          product.offer.discountReserved = Math.max(
-            0,
-            (product.offer.discountReserved || 0) - item.quantity
-          );
-          product.markModified("offer");
-        } else {
-          product.quantity = (product.quantity || 0) + item.quantity;
-          product.reserved = Math.max(
-            0,
-            (product.reserved || 0) - item.quantity
-          );
-        }
+        incUpdate["reserved"] = -item.quantity;
       }
-      await product.save();
+      return {
+        updateOne: {
+          filter: { _id: item.product },
+          update: { $inc: incUpdate },
+        },
+      };
+    });
+
+    if (bulkUpdateOperations.length > 0) {
+      await Product.bulkWrite(bulkUpdateOperations);
     }
 
-    order.status = byAdmin ? "cancelled_by_admin" : "cancelled_by_user";
+    order.status = "cancelled";
     await order.save();
-    res.json({ message: "تم إلغاء الطلب" });
+
+    res.json({ message: "تم إلغاء الطلب وإرجاع الكميات المحجوزة" });
   } catch (err) {
-    console.error("Error in cancelOrder:", err); // Log the error
+    console.error("Error in cancelOrder:", err);
     res.status(400).json({ message: err.message });
   }
 };

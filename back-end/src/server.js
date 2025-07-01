@@ -15,6 +15,8 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import { setupSocket } from "./utils/socket.js";
+import testErrorRoute from "./routes/testErrorRoute.js";
+import Logger from "./logger.js";
 
 // ✅ الطريقة الصحيحة لتعريف __dirname في ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +58,21 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/sales-movements", salesMovementRoutes);
 app.use("/api/reports", reportRoutes);
+app.use(testErrorRoute);
+
+// إضافة ميدلوير الأخطاء في النهاية
+app.use((err, req, res, next) => {
+  Logger.logError(err, req);
+  if (process.env.NODE_ENV === "development") {
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message,
+      stack: err.stack,
+    });
+  } else {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
 // تشغيل السيرفر مع معالجة الأخطاء
 const startServer = async () => {

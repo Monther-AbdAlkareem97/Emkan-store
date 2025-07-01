@@ -66,7 +66,7 @@
                 <p class="text-sm text-gray-500">الكمية: {{ item.quantity }}</p>
               </div>
               <p class="text-lg font-semibold text-gray-700">
-                {{ (item.price * item.quantity).toFixed(2) }} ر.س
+                {{ (item.price * item.quantity).toFixed(2) }}د.ل
               </p>
             </li>
           </ul>
@@ -75,7 +75,7 @@
               class="flex justify-between items-center text-xl font-bold text-gray-800"
             >
               <span>المجموع الإجمالي:</span>
-              <span>{{ cartStore.total.toFixed(2) }} ر.س</span>
+              <span>{{ cartStore.total.toFixed(2) }} د.ل</span>
             </div>
           </div>
         </div>

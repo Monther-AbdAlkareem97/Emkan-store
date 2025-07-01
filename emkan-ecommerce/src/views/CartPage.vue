@@ -125,7 +125,7 @@
         >
         <div class="mt-6 text-center">
           <p class="text-2xl font-semibold text-gray-800">
-            المجموع الإجمالي: {{ cartStore.total.toFixed(2) }} ر.س
+            المجموع الإجمالي: {{ cartStore.total.toFixed(2) }} د.ل
           </p>
           <router-link
             to="/checkout"

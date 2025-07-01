@@ -228,9 +228,7 @@
       >
         <font-awesome-icon
           :icon="toastType === 'error' ? 'circle-xmark' : 'circle-check'"
-          :class="
-            toastType === 'error' ? 'text-red-500' : 'text-green-500'
-          "
+          :class="toastType === 'error' ? 'text-red-500' : 'text-green-500'"
           class="text-xl sm:text-2xl"
         />
         <span class="font-bold truncate">{{ toastMessage }}</span>
@@ -359,13 +357,14 @@ const addToCart = async () => {
     return;
   }
 
+  let result;
   if (existingSpecificItemInCart) {
-    await cartStore.updateQuantity(
+    result = await cartStore.updateQuantity(
       existingSpecificItemInCart,
       existingSpecificItemInCart.quantity + modalInputQuantity
     );
   } else {
-    await cartStore.addToCart(
+    result = await cartStore.addToCart(
       currentProduct._id,
       modalInputQuantity,
       currentProduct.discountPrice || currentProduct.price,
@@ -373,13 +372,24 @@ const addToCart = async () => {
     );
   }
 
-  await cartStore.fetchCart();
-  showAddedPopup.value = true;
-  addedProductName.value = currentProduct.name;
-  closeModal();
-  setTimeout(() => {
-    showAddedPopup.value = false;
-  }, 3000);
+  // التعامل مع نتيجة الرد من backend عبر Pinia
+  if (result && result.success) {
+    await cartStore.fetchCart();
+    showAddedPopup.value = true;
+    addedProductName.value = currentProduct.name;
+    closeModal();
+    setTimeout(() => {
+      showAddedPopup.value = false;
+    }, 3000);
+  } else {
+    // عرض رسالة الخطأ في toast فقط
+    triggerToast(
+      result && result.message
+        ? result.message
+        : "حدث خطأ أثناء إضافة المنتج للسلة",
+      "error"
+    );
+  }
 };
 
 const showMore = () => {
