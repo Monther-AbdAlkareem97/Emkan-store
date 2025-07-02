@@ -309,7 +309,7 @@ const discountedProducts = computed(() =>
 
 const availableQuantity = (product) => {
   if (!product) return 0;
-  // الكمية المحجوزة في السلة لهذا المنتج المخفض فقط إذا كان isDiscounted = true
+  // الكمية المحجوزة في السلة لهذا المنتج المخفض فقط (isDiscounted = true)
   let inCart = 0;
   if (cartStore.cartItems && Array.isArray(cartStore.cartItems)) {
     inCart = cartStore.cartItems
@@ -319,11 +319,11 @@ const availableQuantity = (product) => {
       })
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
   }
-  // الكمية المتاحة للعرض هي فقط الكمية المخفضة - المحجوزة - الموجودة في السلة
+  // الكمية المتاحة للعرض هي فقط الكمية المخفضة - المحجوزة في السلة
   return product.offer &&
     product.offer.active &&
     product.offer.discountQuantity > 0
-    ? product.offer.discountQuantity - (product.reserved || 0) - inCart
+    ? product.offer.discountQuantity - inCart
     : 0;
 };
 

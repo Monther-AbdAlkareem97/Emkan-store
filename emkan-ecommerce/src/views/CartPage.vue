@@ -182,21 +182,17 @@ const total = computed(() =>
 );
 
 async function handleUpdateQuantity(item, newQuantity) {
-  // تحقق محلي قبل الإرسال للباك اند
   const productId = item.product?._id || item.productId || item._id;
   const product = getProduct(productId);
   if (!product) {
     window.alert("تعذر العثور على بيانات المنتج.");
     return;
   }
-  // جمع كل الكميات لنفس المنتج (بنفس السعر وحالة الخصم)
+  const isDiscounted = !!item.isDiscounted;
+  // جمع كل الكميات لنفس المنتج حسب حالة الخصم فقط
   const similarItems = cartStore.cart.filter((i) => {
     const iProductId = i.product?._id || i.productId || i._id;
-    return (
-      iProductId === productId &&
-      i.price === item.price &&
-      !!i.isDiscounted === !!item.isDiscounted
-    );
+    return iProductId === productId && !!i.isDiscounted === isDiscounted;
   });
   // مجموع الكميات بعد التحديث
   const otherItemsTotal = similarItems.reduce(
@@ -204,7 +200,9 @@ async function handleUpdateQuantity(item, newQuantity) {
     0
   );
   const totalRequested = newQuantity + otherItemsTotal;
-  const maxAvailable = product.quantity || 0;
+  const maxAvailable = isDiscounted
+    ? product.offer?.discountQuantity || 0
+    : product.quantity || 0;
   if (totalRequested > maxAvailable) {
     window.alert(
       `الكمية المطلوبة غير متوفرة لهذا المنتج. الكمية المتاحة: ${

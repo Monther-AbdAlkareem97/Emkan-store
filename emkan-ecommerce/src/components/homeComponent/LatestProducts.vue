@@ -357,14 +357,13 @@ const addToCart = async () => {
     return;
   }
 
-  let result;
   if (existingSpecificItemInCart) {
-    result = await cartStore.updateQuantity(
+    await cartStore.updateQuantity(
       existingSpecificItemInCart,
       existingSpecificItemInCart.quantity + modalInputQuantity
     );
   } else {
-    result = await cartStore.addToCart(
+    await cartStore.addToCart(
       currentProduct._id,
       modalInputQuantity,
       currentProduct.discountPrice || currentProduct.price,
@@ -372,24 +371,13 @@ const addToCart = async () => {
     );
   }
 
-  // التعامل مع نتيجة الرد من backend عبر Pinia
-  if (result && result.success) {
-    await cartStore.fetchCart();
-    showAddedPopup.value = true;
-    addedProductName.value = currentProduct.name;
-    closeModal();
-    setTimeout(() => {
-      showAddedPopup.value = false;
-    }, 3000);
-  } else {
-    // عرض رسالة الخطأ في toast فقط
-    triggerToast(
-      result && result.message
-        ? result.message
-        : "حدث خطأ أثناء إضافة المنتج للسلة",
-      "error"
-    );
-  }
+  await cartStore.fetchCart();
+  showAddedPopup.value = true;
+  addedProductName.value = currentProduct.name;
+  closeModal();
+  setTimeout(() => {
+    showAddedPopup.value = false;
+  }, 3000);
 };
 
 const showMore = () => {
