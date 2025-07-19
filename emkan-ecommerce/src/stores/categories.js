@@ -6,7 +6,7 @@ export const useCategoriesStore = defineStore("categories", () => {
   const categories = ref([]);
   const loading = ref(false);
   const error = ref(null);
-  const api = "http://localhost:5000/api/categories";
+  const api = "/api/categories";
 
   const fetchCategories = async () => {
     loading.value = true;
@@ -39,6 +39,18 @@ export const useCategoriesStore = defineStore("categories", () => {
     }
   };
 
+  const updateCategory = async (id, data) => {
+    try {
+      const res = await axios.put(`${api}/${id}`, data);
+      const index = categories.value.findIndex((cat) => cat._id === id);
+      if (index !== -1) {
+        categories.value[index] = res.data;
+      }
+    } catch (err) {
+      error.value = err.response?.data?.message || "خطأ في تعديل التصنيف";
+    }
+  };
+
   // دعم إضافة تصنيف من البوب أب القديم
   const addNewCategory = createCategory;
 
@@ -49,6 +61,7 @@ export const useCategoriesStore = defineStore("categories", () => {
     fetchCategories,
     createCategory,
     deleteCategory,
+    updateCategory,
     addNewCategory,
   };
 });

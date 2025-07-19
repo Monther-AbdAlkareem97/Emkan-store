@@ -101,7 +101,7 @@ async function fetchOrders() {
   loading.value = true;
   error.value = "";
   try {
-    const res = await axios.get("http://localhost:5000/api/orders/all", {
+    const res = await axios.get("/api/orders/all", {
       withCredentials: true,
     });
     orders.value = res.data || [];
@@ -137,7 +137,7 @@ async function confirmOrder(id) {
   if (!order) return;
   try {
     await axios.post(
-      "http://localhost:5000/api/orders/approve",
+      "/api/orders/approve",
       { orderId: id },
       { withCredentials: true }
     );

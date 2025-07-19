@@ -73,9 +73,7 @@ export const addToCart = async (req, res) => {
       (existingItem ? existingItem.quantity : 0) + quantity;
     if (totalRequested > available) {
       return res.status(400).json({
-        success: false,
         message: `الكمية المطلوبة (${totalRequested}) غير متوفرة لهذا المنتج. الكمية المتاحة: ${available}`,
-        items: cart.items,
       });
     }
 
@@ -104,14 +102,9 @@ export const addToCart = async (req, res) => {
 
     // Populate product details before sending response
     await cart.populate("items.product");
-    res.json({
-      success: true,
-      items: cart.items,
-      message: "تمت الإضافة بنجاح",
-    });
+    res.json(cart);
   } catch (err) {
     res.status(500).json({
-      success: false,
       message: "خطأ في إضافة المنتج للسلة",
       error: err.message,
     });

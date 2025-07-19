@@ -121,7 +121,11 @@ const setProductOffer = async (req, res) => {
     }
     // لا تعدل الكمية الأصلية إطلاقاً عند تفعيل أو إلغاء العرض
     // استرجاع الكمية الأصلية أولاً إذا كان هناك عرض سابق
-    if (product.offer && product.offer.discountQuantity > 0 && product.offer.active) {
+    if (
+      product.offer &&
+      product.offer.discountQuantity > 0 &&
+      product.offer.active
+    ) {
       product.quantity += product.offer.discountQuantity;
     }
     // إذا كان العرض الجديد مفعل (active === true) وبه كمية مخفضة

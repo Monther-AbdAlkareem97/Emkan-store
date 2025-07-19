@@ -12,7 +12,7 @@ export const useCartStore = defineStore("cart", () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.get("http://localhost:5000/api/cart", {
+      const res = await axios.get("/api/cart", {
         withCredentials: true,
       });
       cart.value = res.data.items || [];
@@ -32,7 +32,7 @@ export const useCartStore = defineStore("cart", () => {
   ) => {
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/cart/add",
+        "/api/cart/add",
         { productId, quantity, price, isDiscounted },
         { withCredentials: true }
       );
@@ -58,7 +58,7 @@ export const useCartStore = defineStore("cart", () => {
         return;
       }
       const res = await axios.post(
-        "http://localhost:5000/api/cart/remove",
+        "/api/cart/remove",
         { cartItemId }, // Send cartItemId
         { withCredentials: true }
       );
@@ -79,7 +79,7 @@ export const useCartStore = defineStore("cart", () => {
         return;
       }
       const res = await axios.post(
-        "http://localhost:5000/api/cart/update",
+        "/api/cart/update",
         { cartItemId, quantity }, // Send cartItemId and new quantity
         { withCredentials: true }
       );
@@ -128,13 +128,9 @@ export const useCartStore = defineStore("cart", () => {
         JSON.stringify(orderDetails)
       ); // <--- إضافة تسجيل
 
-      const response = await axios.post(
-        "http://localhost:5000/api/orders",
-        orderDetails,
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await axios.post("/api/orders", orderDetails, {
+        withCredentials: true,
+      });
       console.log(
         "cart.js: submitOrder - Order creation response status:",
         response.status
@@ -145,11 +141,7 @@ export const useCartStore = defineStore("cart", () => {
         console.log(
           "cart.js: submitOrder - Order successful, attempting to clear cart."
         ); // <--- إضافة تسجيل
-        await axios.post(
-          "http://localhost:5000/api/cart/clear",
-          {},
-          { withCredentials: true }
-        );
+        await axios.post("/api/cart/clear", {}, { withCredentials: true });
         console.log(
           "cart.js: submitOrder - Backend cart cleared. Clearing local cart."
         ); // <--- إضافة تسجيل

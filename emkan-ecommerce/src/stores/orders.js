@@ -12,7 +12,7 @@ export const useOrdersStore = defineStore("orders", () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.get("http://localhost:5000/api/orders/all", {
+      const res = await axios.get("/api/orders/all", {
         withCredentials: true,
       });
       orders.value = res.data;
@@ -28,7 +28,7 @@ export const useOrdersStore = defineStore("orders", () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.get("http://localhost:5000/api/orders/my", {
+      const res = await axios.get("/api/orders/my", {
         withCredentials: true,
       });
       orders.value = res.data;
@@ -45,7 +45,7 @@ export const useOrdersStore = defineStore("orders", () => {
     error.value = null;
     try {
       await axios.post(
-        "http://localhost:5000/api/orders/cancel",
+        "/api/orders/cancel",
         { orderId },
         { withCredentials: true }
       );

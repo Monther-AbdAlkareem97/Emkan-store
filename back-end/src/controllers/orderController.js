@@ -17,6 +17,12 @@ export const createOrder = async (req, res) => {
 
   try {
     const userId = req.user.userId;
+    // تحقق من نوع المستخدم
+    const foundUser = await User.findById(userId);
+    if (foundUser && foundUser.role === "admin") {
+      return res.status(403).json({ message: "لا يمكن للأدمن إنشاء طلبات." });
+    }
+
     const { items, notes } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -133,10 +139,6 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // if (bulkUpdateOperations.length > 0) {
-    //   await Product.bulkWrite(bulkUpdateOperations);
-    // }
-
     const order = await Order.create({
       user: userId,
       items: orderItemsForDB,
@@ -152,13 +154,13 @@ export const createOrder = async (req, res) => {
       text: `هناك طلب جديد من المستخدم ${userId} بحاجة للمراجعة.`,
     });
 
-    const user = await User.findById(userId);
+    const userInfo = await User.findById(userId);
     emitAdminNotification({
       type: "new_order",
       userId,
       orderId: order._id,
-      message: `طلب جديد من ${user?.name || "مستخدم"} (${
-        user?.phone || "بدون رقم"
+      message: `طلب جديد من ${userInfo?.name || "مستخدم"} (${
+        userInfo?.phone || "بدون رقم"
       }) بحاجة للمراجعة.`,
     });
 
@@ -251,7 +253,12 @@ export const cancelOrder = async (req, res) => {
       await Product.bulkWrite(bulkUpdateOperations);
     }
 
-    order.status = "cancelled";
+    // حدد الحالة حسب من قام بالإلغاء
+    if (req.body.byAdmin) {
+      order.status = "cancelled_by_admin";
+    } else {
+      order.status = "cancelled_by_user";
+    }
     await order.save();
 
     res.json({ message: "تم إلغاء الطلب وإرجاع الكميات المحجوزة" });

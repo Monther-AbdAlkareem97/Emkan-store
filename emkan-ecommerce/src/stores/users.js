@@ -10,7 +10,7 @@ export const useUsersStore = defineStore("users", () => {
   async function fetchUsers() {
     loading.value = true;
     try {
-      const res = await axios.get("http://localhost:3000/users");
+      const res = await axios.get("/users");
       users.value = Object.fromEntries(res.data.map((u) => [u.id, u]));
       error.value = null;
     } catch (err) {
@@ -23,7 +23,7 @@ export const useUsersStore = defineStore("users", () => {
   async function fetchUser(id) {
     loading.value = true;
     try {
-      const res = await axios.get(`http://localhost:3000/users/${id}`);
+      const res = await axios.get(`/users/${id}`);
       users.value[res.data.id] = res.data;
       error.value = null;
     } catch (err) {
@@ -43,10 +43,7 @@ export const useUsersStore = defineStore("users", () => {
         address: userData.address || "",
         password: userData.password || "",
       };
-      const res = await axios.post(
-        "http://localhost:3000/users",
-        userWithDefaults
-      );
+      const res = await axios.post("/users", userWithDefaults);
       users.value[res.data.id] = res.data;
       error.value = null;
     } catch (err) {
@@ -66,10 +63,7 @@ export const useUsersStore = defineStore("users", () => {
         address: userData.address || "",
         password: userData.password || "",
       };
-      const res = await axios.put(
-        `http://localhost:3000/users/${id}`,
-        userWithDefaults
-      );
+      const res = await axios.put(`/users/${id}`, userWithDefaults);
       users.value[res.data.id] = res.data;
       error.value = null;
     } catch (err) {
@@ -82,7 +76,7 @@ export const useUsersStore = defineStore("users", () => {
   async function deleteUser(id) {
     loading.value = true;
     try {
-      await axios.delete(`http://localhost:3000/users/${id}`);
+      await axios.delete(`/users/${id}`);
       delete users.value[id];
       error.value = null;
     } catch (err) {

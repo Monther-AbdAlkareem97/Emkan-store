@@ -95,12 +95,16 @@
           <img
             :src="
               product.image
-                ? `http://localhost:5000/${product.image}`
+                ? product.image.startsWith('http') ||
+                  product.image.startsWith('/uploads')
+                  ? product.image
+                  : '/uploads/' + product.image
                 : '/img/unnamed.webp'
             "
             :alt="product.name"
             class="w-full h-48 object-cover group-hover:opacity-90 transition-all duration-200"
           />
+
           <div class="p-5 flex flex-col gap-2">
             <h2
               class="text-lg font-bold mb-1 text-blue-800 flex items-center gap-2"
@@ -182,7 +186,8 @@ import ProductPopUp from "@/components/dashboardComponent/cardsPopUpComponent/pr
 const productsStore = useProductsStore();
 const categoriesStore = useCategoriesStore();
 
-const searchQuery = ref("");
+// استخدم searchQuery من store مباشرة
+const searchQuery = productsStore.searchQuery;
 const selectedCategory = ref("الكل");
 const showAddProduct = ref(false);
 const editingProduct = ref(null);
@@ -197,21 +202,13 @@ const selectCategory = (cat) => {
 };
 
 const filteredProducts = computed(() => {
-  let products = productsStore.products;
+  let products = productsStore.filteredProducts;
   if (selectedCategory.value !== "الكل") {
     products = products.filter(
       (p) =>
         p.category &&
         (p.category.name === selectedCategory.value ||
           p.category === selectedCategory.value)
-    );
-  }
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase();
-    products = products.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
     );
   }
   return products;

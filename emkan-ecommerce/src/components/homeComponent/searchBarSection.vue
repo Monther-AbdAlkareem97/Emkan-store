@@ -20,9 +20,11 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { useProductsStore } from "@/stores/products";
+import { computed } from "vue";
 
-const searchQuery = ref("");
+const productsStore = useProductsStore();
+const searchQuery = productsStore.searchQuery;
 </script>
 
 <style scoped>

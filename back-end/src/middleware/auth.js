@@ -24,6 +24,7 @@ export const auth = async (req, res, next) => {
 };
 
 // السماح للأدمن فقط
+
 export const adminOnly = async (req, res, next) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ message: "مسموح للأدمن فقط" });

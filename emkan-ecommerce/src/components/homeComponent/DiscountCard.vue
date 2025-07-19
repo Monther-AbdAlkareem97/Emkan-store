@@ -51,8 +51,16 @@
       <SwiperSlide
         v-for="product in discountedProducts"
         :key="product._id"
-        @click="availableQuantity(product) > 0 && openPopup(product)"
-        class="m-5 cursor-pointer bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 rounded-2xl p-5 flex flex-col items-center text-center shadow-md relative group"
+        @click="
+          authStore.user && authStore.user.role === 'admin'
+            ? null
+            : availableQuantity(product) > 0 && openPopup(product)
+        "
+        class="m-5 bg-white rounded-2xl p-5 flex flex-col items-center text-center shadow-md relative group"
+        :class="{
+          'pointer-events-none opacity-60':
+            authStore.user && authStore.user.role === 'admin',
+        }"
       >
         <!-- Sold Out Ribbon -->
         <div
@@ -65,9 +73,10 @@
           <img
             :src="
               product.image
-                ? product.image.startsWith('http')
+                ? product.image.startsWith('http') ||
+                  product.image.startsWith('/uploads')
                   ? product.image
-                  : 'http://localhost:5000/' + product.image
+                  : '/uploads/' + product.image
                 : '/img/unnamed.webp'
             "
             :alt="product.name"
@@ -96,20 +105,21 @@
                 >{{ product.price }} د.ل</span
               >
               <span class="inline-block w-2"></span>
-              <span class="text-green-600"
-                >{{
+              <span class="text-green-600">
+                {{
                   (
                     product.price *
                     (1 - (product.offer.discountValue || 0) / 100)
                   ).toFixed(2)
                 }}
-                د.ل</span
-              >
+                د.ل
+              </span>
             </div>
           </span>
           <button
             class="relative group bg-gradient-to-l from-[#AFDBB0] to-[#0074AF] text-white text-xs md:text-sm px-4 py-2 rounded-full shadow-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
             @click.stop="openPopup(product)"
+            :disabled="authStore.user && authStore.user.role === 'admin'"
           >
             <font-awesome-icon icon="cart-shopping" />
           </button>
@@ -120,32 +130,34 @@
       <h1>لا توجد عروض متاحة حاليًا.</h1>
     </div>
 
-    <!-- نافذة المنتج -->
+    <!-- نافذة المنتج (البوب-أب) -->
     <div
       v-if="selectedProduct"
       class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm transition-all duration-300"
-      @click.self="selectedProduct = null"
+      @click.self="closePopup"
     >
       <div
         class="relative bg-white rounded-2xl p-8 w-[90%] max-w-[400px] sm:max-w-[500px] md:max-w-[600px] text-center shadow-2xl border border-blue-100 animate-popup"
       >
         <button
           class="absolute top-3 left-3 text-gray-400 hover:text-red-500 text-2xl transition-all duration-200 bg-gray-100 rounded-full p-2 shadow-md"
-          @click="selectedProduct = null"
+          @click="closePopup"
         >
           <font-awesome-icon icon="xmark" />
         </button>
         <img
           :src="
             selectedProduct.image
-              ? selectedProduct.image.startsWith('http')
+              ? selectedProduct.image.startsWith('http') ||
+                selectedProduct.image.startsWith('/uploads')
                 ? selectedProduct.image
-                : 'http://localhost:5000/' + selectedProduct.image
+                : '/uploads/' + selectedProduct.image
               : '/img/unnamed.webp'
           "
           alt=""
           class="w-full h-52 object-contain mb-4 rounded-xl shadow-sm border"
         />
+
         <h3 class="text-2xl font-bold mb-2 text-blue-800">
           {{ selectedProduct.title || selectedProduct.name }}
           <span
@@ -158,26 +170,19 @@
           {{ selectedProduct.description }}
         </p>
         <div class="text-green-600 font-bold text-xl mb-4">
-          <p
-            v-if="
-              selectedProduct.offer && selectedProduct.offer.discountValue > 0
-            "
+          <span class="line-through text-gray-400 mr-2"
+            >{{ selectedProduct.price }} د.ل</span
           >
-            <span class="line-through text-gray-400 mr-2"
-              >{{ selectedProduct.price }} د.ل</span
-            >
-            <span class="inline-block w-2"></span>
-            <span class="text-green-600">
-              {{
-                (
-                  selectedProduct.price *
-                  (1 - (selectedProduct.offer.discountValue || 0) / 100)
-                ).toFixed(2)
-              }}
-              د.ل
-            </span>
-          </p>
-          <p v-else>{{ selectedProduct.price }} د.ل</p>
+          <span class="inline-block w-2"></span>
+          <span class="text-green-600">
+            {{
+              (
+                selectedProduct.price *
+                (1 - (selectedProduct.offer.discountValue || 0) / 100)
+              ).toFixed(2)
+            }}
+            د.ل
+          </span>
         </div>
         <div class="mb-4 flex flex-col items-center gap-2">
           <label for="quantity" class="text-sm font-semibold text-gray-700"
@@ -214,12 +219,17 @@
             </button>
           </div>
         </div>
+        <!-- زر إضافة للسلة في البوب أب -->
         <button
           class="mt-2 relative group bg-gradient-to-l from-[#AFDBB0] to-[#0074AF] text-white text-base px-8 py-3 rounded-full shadow-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 mx-auto"
           @click="addToCart(selectedProduct, quantity)"
-          :disabled="availableQuantity(selectedProduct) <= 0"
+          :disabled="
+            availableQuantity(selectedProduct) <= 0 ||
+            (authStore.user && authStore.user.role === 'admin')
+          "
           :class="
-            availableQuantity(selectedProduct) <= 0
+            availableQuantity(selectedProduct) <= 0 ||
+            (authStore.user && authStore.user.role === 'admin')
               ? 'bg-gray-400 cursor-not-allowed opacity-60'
               : ''
           "
@@ -227,6 +237,9 @@
           <font-awesome-icon icon="cart-shopping" />
           <span v-if="availableQuantity(selectedProduct) <= 0"
             >نفذت الكمية</span
+          >
+          <span v-else-if="authStore.user && authStore.user.role === 'admin'"
+            >غير متاح للأدمن</span
           >
           <span v-else>إضافة للسلة</span>
         </button>
@@ -274,7 +287,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useProductsStore } from "@/stores/products";
 import { useCartStore } from "@/stores/cart";
 import { useAuthStore } from "@/stores/auth";
@@ -297,19 +310,22 @@ const showToast = ref(false);
 const toastMessage = ref("");
 const toastType = ref("success");
 
+// حماية متقدمة: اجعل المنتجات دائماً مصفوفة حتى لو لم تحمل بعد
 const discountedProducts = computed(() =>
-  productsStore.products.filter(
-    (p) =>
-      p.offer &&
-      p.offer.active &&
-      p.offer.discountValue > 0 &&
-      p.offer.discountQuantity > 0
-  )
+  Array.isArray(productsStore.filteredProducts)
+    ? productsStore.filteredProducts.filter(
+        (p) =>
+          p &&
+          p.offer &&
+          p.offer.active &&
+          p.offer.discountValue > 0 &&
+          p.offer.discountQuantity > 0
+      )
+    : []
 );
 
 const availableQuantity = (product) => {
   if (!product) return 0;
-  // الكمية المحجوزة في السلة لهذا المنتج المخفض فقط (isDiscounted = true)
   let inCart = 0;
   if (cartStore.cartItems && Array.isArray(cartStore.cartItems)) {
     inCart = cartStore.cartItems
@@ -319,7 +335,6 @@ const availableQuantity = (product) => {
       })
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
   }
-  // الكمية المتاحة للعرض هي فقط الكمية المخفضة - المحجوزة في السلة
   return product.offer &&
     product.offer.active &&
     product.offer.discountQuantity > 0
@@ -328,8 +343,15 @@ const availableQuantity = (product) => {
 };
 
 function openPopup(product) {
-  selectedProduct.value = product;
+  selectedProduct.value = {
+    ...product,
+    requestedQuantity: 1,
+  };
   quantity.value = 1;
+}
+
+function closePopup() {
+  selectedProduct.value = null;
 }
 
 function triggerToast(message, type = "success") {
@@ -341,32 +363,59 @@ function triggerToast(message, type = "success") {
   }, 3000);
 }
 
-async function addToCart(product, qty) {
+const addToCart = async () => {
   if (!authStore.isLoggedIn) {
     window.location.href = "/login";
     return;
   }
-  if (qty < 1) return;
-  // تحقق إضافي قبل الإرسال: لا تسمح بإضافة أكثر من الكمية المتاحة
-  const maxQty = availableQuantity(product);
-  if (qty > maxQty) {
+  if (!selectedProduct.value) return;
+
+  const currentProduct = selectedProduct.value;
+  const modalInputQuantity = quantity.value || 1;
+
+  const isDiscounted = true;
+  const price =
+    currentProduct.price *
+    (1 - (currentProduct.offer?.discountValue || 0) / 100);
+
+  // تحقق من الكمية في السلة
+  const maxStock = currentProduct.offer?.discountQuantity || 0;
+  const inCart =
+    cartStore.cartItems && Array.isArray(cartStore.cartItems)
+      ? cartStore.cartItems
+          .filter((item) => {
+            const itemProductId =
+              item.product?._id || item.productId || item._id;
+            return itemProductId === currentProduct._id && !!item.isDiscounted;
+          })
+          .reduce((sum, item) => sum + (item.quantity || 0), 0)
+      : 0;
+
+  if (modalInputQuantity + inCart > maxStock) {
     triggerToast(
-      `لا يمكن إضافة أكثر من الكمية المتاحة (${maxQty}) لهذا المنتج.`,
+      `الكمية المطلوبة غير متوفرة! يمكنك إضافة فقط ${
+        maxStock - inCart
+      } من هذا المنتج.`,
       "error"
     );
     return;
   }
-  const price = product.price * (1 - (product.offer?.discountValue || 0) / 100);
-  // Pass isDiscounted: true explicitly for discounted products
-  const result = await cartStore.addToCart(product._id, qty, price, true);
+
+  const result = await cartStore.addToCart(
+    currentProduct._id,
+    modalInputQuantity,
+    price,
+    isDiscounted
+  );
+
   if (result && result.success === true) {
-    selectedProduct.value = null;
-    quantity.value = 1;
-    addedProductName.value = product.name;
+    closePopup();
     showAddedPopup.value = true;
+    addedProductName.value = currentProduct.name;
     setTimeout(() => {
       showAddedPopup.value = false;
-    }, 1800);
+    }, 3000);
+    await cartStore.fetchCart();
   } else {
     triggerToast(
       result && result.message
@@ -375,7 +424,7 @@ async function addToCart(product, qty) {
       "error"
     );
   }
-}
+};
 </script>
 
 <style scoped>
@@ -383,7 +432,6 @@ async function addToCart(product, qty) {
   box-shadow: 0 -10px 15px -3px rgba(107, 114, 128),
     0 10px 15px -3px rgba(107, 114, 128);
 }
-
 @keyframes popup {
   0% {
     opacity: 0;
@@ -397,7 +445,6 @@ async function addToCart(product, qty) {
 .animate-popup {
   animation: popup 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .fade-pop-enter-active,
 .fade-pop-leave-active {
   transition: opacity 0.3s;

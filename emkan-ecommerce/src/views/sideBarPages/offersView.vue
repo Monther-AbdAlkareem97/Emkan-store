@@ -34,9 +34,10 @@
               <img
                 :src="
                   product.image
-                    ? product.image.startsWith('http')
+                    ? product.image.startsWith('http') ||
+                      product.image.startsWith('/uploads')
                       ? product.image
-                      : 'http://localhost:5000/' + product.image
+                      : '/uploads/' + product.image
                     : '/img/unnamed.webp'
                 "
                 class="w-20 h-20 object-cover rounded-lg border mb-2"
@@ -167,13 +168,15 @@
               <img
                 :src="
                   product.image
-                    ? product.image.startsWith('http')
+                    ? product.image.startsWith('http') ||
+                      product.image.startsWith('/uploads')
                       ? product.image
-                      : 'http://localhost:5000/' + product.image
+                      : '/uploads/' + product.image
                     : '/img/unnamed.webp'
                 "
                 class="w-16 h-16 object-cover rounded-lg border mb-2"
               />
+
               <div class="font-bold text-gray-800 text-sm truncate w-full">
                 {{ product.name }}
               </div>

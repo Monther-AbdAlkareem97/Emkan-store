@@ -13,7 +13,7 @@ export const useReportsStore = defineStore("reports", () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.get("http://localhost:5000/api/reports", {
+      const res = await axios.get("/api/reports", {
         withCredentials: true,
       });
       stats.value = res.data.stats || {

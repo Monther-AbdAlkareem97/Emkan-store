@@ -1,4 +1,7 @@
 <template>
+  <!-- (مضاف حديثاً) عنصر الصوت -->
+  <audio id="notifSound" src="/notification.mp3" preload="auto"></audio>
+
   <nav
     class="absolute left-64 flex w-full max-w-3xl mx-auto h-14 bg-white shadow-lg rounded-2xl mt-4 px-8 z-10"
   >
@@ -134,6 +137,15 @@ const adminImage = "/profile.jpg"; // يمكنك تغيير المسار لصو�
 const authStore = useAuthStore();
 const ordersStore = useOrdersStore();
 
+// (مضاف حديثاً) دالة تشغيل الصوت
+function playNotifSound() {
+  const sound = document.getElementById("notifSound");
+  if (sound) {
+    sound.currentTime = 0;
+    sound.play();
+  }
+}
+
 // WebSocket (Socket.io) setup
 let socket;
 
@@ -145,9 +157,15 @@ const bellButtonRef = ref(null);
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
   // الاتصال بسيرفر الويب سوكت
-  socket = io("http://localhost:5000", { withCredentials: true });
+  const wsUrl =
+    window.location.hostname === "localhost"
+      ? "http://localhost:5000"
+      : "https://www.emkan-store.ly";
+  socket = io(wsUrl, { withCredentials: true });
 
   socket.on("admin_notification", (data) => {
+    playNotifSound(); // (مضاف حديثاً) تشغيل الصوت عند وصول إشعار
+
     // Log received data for debugging
     console.log("WebSocket admin_notification received:", data);
 
@@ -231,8 +249,6 @@ function toggleNotifications() {
 }
 
 // إغلاق البوب أب عند الضغط خارج القائمة
-// const profileMenuWrapper = ref(null); // Moved up
-
 function handleClickOutside(event) {
   // إغلاق قائمة البروفايل
   if (

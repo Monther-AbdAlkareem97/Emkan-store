@@ -293,9 +293,9 @@ watch(
       productInfo.category = newVal.category?._id || newVal.category || "";
       productInfo.image = ""; // لا تملأ الصورة بملف، فقط اتركها فارغة
       imagePreview.value = newVal.image
-        ? newVal.image.startsWith("http")
+        ? newVal.image.startsWith("http") || newVal.image.startsWith("/uploads")
           ? newVal.image
-          : `http://localhost:5000/${newVal.image}`
+          : `/uploads/${newVal.image}`
         : null;
     } else {
       // إعادة تعيين الحقول عند الإضافة

@@ -12,7 +12,7 @@ export const useAuthStore = defineStore("auth", () => {
     loading.value = true;
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        "/api/auth/login",
         {
           phone,
           password,
@@ -33,11 +33,9 @@ export const useAuthStore = defineStore("auth", () => {
   async function signup(userData) {
     loading.value = true;
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/register",
-        userData,
-        { withCredentials: true }
-      );
+      const res = await axios.post("/api/auth/register", userData, {
+        withCredentials: true,
+      });
       user.value = res.data.user;
       isLoggedIn.value = true;
       error.value = null;
@@ -52,7 +50,7 @@ export const useAuthStore = defineStore("auth", () => {
   async function logout() {
     try {
       await axios.post(
-        "http://localhost:5000/api/auth/logout",
+        "/api/auth/logout",
         {},
         {
           withCredentials: true,
@@ -68,7 +66,7 @@ export const useAuthStore = defineStore("auth", () => {
   async function checkAuth() {
     loading.value = true;
     try {
-      const res = await axios.get("http://localhost:5000/api/auth/me", {
+      const res = await axios.get("/api/auth/me", {
         withCredentials: true,
       });
       user.value = res.data.user;
@@ -91,7 +89,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       // لا تستخدم localStorage، فقط أرسل الطلب وسيتم جلب الريفريش توكن من الكوكيز
       const res = await axios.post(
-        "http://localhost:5000/api/token/refresh",
+        "/api/token/refresh",
         {},
         { withCredentials: true }
       );

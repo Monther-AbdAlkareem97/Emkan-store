@@ -31,25 +31,60 @@
           إضافة
         </button>
       </form>
+      <div v-if="categoryStore.loading" class="text-center text-gray-500 mb-4">
+        جاري تحميل التصنيفات...
+      </div>
       <div
-        v-if="categoryStore.categories.length === 0"
+        v-else-if="categoryStore.categories.length === 0"
         class="text-center text-gray-500 mb-4"
       >
         لا توجد تصنيفات حالياً
       </div>
-      <ul>
+      <ul v-else>
         <li
           v-for="category in categoryStore.categories"
           :key="category._id"
           class="flex justify-between items-center border-b py-2"
         >
-          <span class="text-base">{{ category.name }}</span>
-          <button
-            @click="categoryStore.deleteCategory(category._id)"
-            class="text-red-500 hover:text-red-700 text-sm px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 transition font-bold"
+          <div
+            v-if="editCategoryId !== category._id"
+            class="flex justify-between items-center w-full"
           >
-            حذف
-          </button>
+            <span class="text-base">{{ category.name }}</span>
+            <div class="flex gap-2">
+              <button
+                @click="startEditCategory(category)"
+                class="text-blue-500 hover:text-blue-700 text-sm px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 transition font-bold"
+              >
+                تعديل
+              </button>
+              <button
+                @click="categoryStore.deleteCategory(category._id)"
+                class="text-red-500 hover:text-red-700 text-sm px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 transition font-bold"
+              >
+                حذف
+              </button>
+            </div>
+          </div>
+          <div v-else class="flex items-center gap-2 w-full">
+            <input
+              v-model="editCategoryName"
+              type="text"
+              class="border rounded-lg px-2 py-1 w-full"
+            />
+            <button
+              @click="saveEditCategory"
+              class="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 font-bold"
+            >
+              حفظ
+            </button>
+            <button
+              @click="cancelEditCategory"
+              class="bg-gray-300 px-3 py-1 rounded-lg font-bold"
+            >
+              إلغاء
+            </button>
+          </div>
         </li>
       </ul>
     </div>
@@ -66,6 +101,9 @@ const emit = defineEmits(["update:modelValue"]);
 const categoryStore = useCategoriesStore();
 const newCategory = ref("");
 
+const editCategoryId = ref(null);
+const editCategoryName = ref("");
+
 onMounted(() => {
   if (categoryStore.categories.length === 0) {
     categoryStore.fetchCategories();
@@ -78,12 +116,32 @@ const addCategory = async () => {
   newCategory.value = "";
 };
 
+function startEditCategory(category) {
+  editCategoryId.value = category._id;
+  editCategoryName.value = category.name;
+}
+
+async function saveEditCategory() {
+  if (!editCategoryName.value.trim() || !editCategoryId.value) return;
+  await categoryStore.updateCategory(editCategoryId.value, {
+    name: editCategoryName.value.trim(),
+  });
+  editCategoryId.value = null;
+  editCategoryName.value = "";
+}
+
+function cancelEditCategory() {
+  editCategoryId.value = null;
+  editCategoryName.value = "";
+}
+
 // تعطيل السكرول عند فتح البوب أب
 watch(
   () => props.modelValue,
   (val) => {
     if (val) {
       document.body.style.overflow = "hidden";
+      categoryStore.fetchCategories();
     } else {
       document.body.style.overflow = "";
     }

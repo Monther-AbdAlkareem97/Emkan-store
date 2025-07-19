@@ -5,7 +5,11 @@ let ioInstance = null;
 export function setupSocket(server) {
   ioInstance = new Server(server, {
     cors: {
-      origin: "http://localhost:8080",
+      origin: [
+        "http://localhost:8080",
+        "https://emkan-store.ly",
+        "https://www.emkan-store.ly",
+      ],
       credentials: true,
     },
   });

@@ -282,7 +282,7 @@ const confirmOrder = async () => {
   if (!selectedOrder.value) return;
   try {
     await axios.post(
-      "http://localhost:5000/api/orders/approve",
+      "/api/orders/approve",
       { orderId: selectedOrder.value._id },
       { withCredentials: true }
     );
@@ -301,7 +301,7 @@ const cancelOrder = async () => {
   if (!selectedOrder.value) return;
   try {
     await axios.post(
-      "http://localhost:5000/api/orders/cancel",
+      "/api/orders/cancel",
       {
         orderId: selectedOrder.value._id,
         byAdmin: true, // --- إضافة هذا الحقل ---

@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema(
 
 // تشفير كلمة المرور قبل الحفظ
 userSchema.pre("save", async function (next) {
+  // اذا المستخدم غير بياناته  الاخرى مثل صوره  ...الخ لا تشفر كلمة المرور مرة اخرى لانها مشفره بالفعل
+  //هنا النفي عشان  طبيعة ال if تنفذ الشرط اذا كان صحيح لذا يجب نفي الحاله التي نريد التشفير فيه
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
@@ -27,6 +29,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 // إخفاء كلمة المرور والريفريش توكن عند التحويل إلى JSON
+// هذا مهم لحماية البيانات الحساسة لكي تصل للفرونت اند بيانات غير مهمه
 userSchema.set("toJSON", {
   transform: function (doc, ret) {
     delete ret.password;

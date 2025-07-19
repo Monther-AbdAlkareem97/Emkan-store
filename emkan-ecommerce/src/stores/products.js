@@ -2,6 +2,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import axios from "axios";
+import { computed } from "vue";
 
 export const useProductsStore = defineStore("product", () => {
   const products = ref([]);
@@ -9,7 +10,7 @@ export const useProductsStore = defineStore("product", () => {
   const loading = ref(false);
   const error = ref(null);
 
-  const api = "http://localhost:5000/api/products";
+  const api = "/api/products";
 
   // جلب جميع المنتجات
   const fetchProducts = async () => {
@@ -96,6 +97,23 @@ export const useProductsStore = defineStore("product", () => {
     }
   };
 
+  // متغير البحث المشترك
+  const searchQuery = ref("");
+
+  // دالة المنتجات المفلترة حسب البحث
+  const filteredProducts = computed(() => {
+    let prods = products.value;
+    if (searchQuery.value.trim()) {
+      const q = searchQuery.value.trim().toLowerCase();
+      prods = prods.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q)
+      );
+    }
+    return prods;
+  });
+
   return {
     products,
     product,
@@ -107,5 +125,7 @@ export const useProductsStore = defineStore("product", () => {
     updateProduct,
     deleteProduct,
     setProductOffer, // إضافة الدالة الجديدة
+    searchQuery,
+    filteredProducts,
   };
 });

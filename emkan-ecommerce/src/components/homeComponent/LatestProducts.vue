@@ -15,8 +15,16 @@
       <div
         v-for="product in displayedProducts"
         :key="product._id"
-        @click="availableQuantity(product) > 0 && openModal(product)"
+        @click="
+          authStore.user && authStore.user.role === 'admin'
+            ? null
+            : availableQuantity(product) > 0 && openModal(product)
+        "
         class="cursor-pointer bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 rounded-2xl p-5 flex flex-col items-center text-center shadow-md relative group"
+        :class="{
+          'pointer-events-none opacity-60':
+            authStore.user && authStore.user.role === 'admin',
+        }"
       >
         <!-- Sold Out Ribbon -->
         <div
@@ -32,15 +40,18 @@
           نفذت الكمية
         </div>
         <img
-          :src="`http://localhost:5000/${product.image}`"
+          :src="
+            product.image
+              ? product.image.startsWith('http') ||
+                product.image.startsWith('/uploads')
+                ? product.image
+                : '/uploads/' + product.image
+              : '/img/unnamed.webp'
+          "
           :alt="product.name"
           class="w-full h-48 object-contain mb-4 rounded-lg"
-          :style="
-            availableQuantity(product) === 0
-              ? 'filter: grayscale(1) opacity(0.5);'
-              : ''
-          "
         />
+
         <h3
           class="text-base md:text-lg font-bold text-gray-800 mb-1 line-clamp-1"
         >
@@ -57,9 +68,9 @@
             v-if="product.isDiscounted"
             class="text-red-600 font-bold text-lg flex flex-col items-end"
           >
-            <span class="line-through text-gray-400 text-sm mb-1"
-              >{{ product.price }} د.ل</span
-            >
+            <span class="line-through text-gray-400 text-sm mb-1">
+              {{ product.price }} د.ل
+            </span>
             <span class="text-green-600">{{ product.discountPrice }} د.ل</span>
             <span
               v-if="product.discountPercent"
@@ -73,6 +84,7 @@
           <button
             class="bg-gradient-to-l from-[#AFDBB0] to-[#0074AF] text-white text-sm px-4 py-2 rounded-full shadow-lg hover:scale-105 transition-all"
             @click.stop="openModal(product)"
+            :disabled="authStore.user && authStore.user.role === 'admin'"
           >
             <font-awesome-icon icon="cart-shopping" />
           </button>
@@ -110,10 +122,18 @@
           <font-awesome-icon icon="xmark" />
         </button>
         <img
-          :src="`http://localhost:5000/${selectedProduct.image}`"
+          :src="
+            selectedProduct.image
+              ? selectedProduct.image.startsWith('http') ||
+                selectedProduct.image.startsWith('/uploads')
+                ? selectedProduct.image
+                : '/uploads/' + selectedProduct.image
+              : '/img/unnamed.webp'
+          "
           alt="product image"
           class="w-full h-48 object-contain mb-4 rounded-xl border"
         />
+
         <h3 class="text-2xl font-bold text-blue-800 mb-2">
           {{ selectedProduct.title || selectedProduct.name }}
           <span
@@ -136,39 +156,31 @@
           <div class="flex items-center justify-center gap-3">
             <button
               type="button"
-              @click="
-                selectedProduct.requestedQuantity = Math.max(
-                  1,
-                  (selectedProduct.requestedQuantity || 1) - 1
-                )
-              "
+              @click="modalQuantity = Math.max(1, modalQuantity - 1)"
               class="bg-gray-200 hover:bg-blue-100 text-blue-700 rounded-full w-8 h-8 flex items-center justify-center"
             >
               <font-awesome-icon icon="minus" />
             </button>
             <input
-              :value="selectedProduct.requestedQuantity"
+              v-model.number="modalQuantity"
               type="number"
-              readonly
+              min="1"
               :max="availableQuantity(selectedProduct)"
               class="w-16 text-center border border-blue-300 rounded-lg p-2 bg-gray-100 text-gray-700"
+              readonly
             />
             <button
               type="button"
               @click="
-                selectedProduct.requestedQuantity = Math.min(
+                modalQuantity = Math.min(
                   availableQuantity(selectedProduct),
-                  (selectedProduct.requestedQuantity || 1) + 1
+                  modalQuantity + 1
                 )
               "
-              :disabled="
-                selectedProduct.requestedQuantity >=
-                availableQuantity(selectedProduct)
-              "
+              :disabled="modalQuantity >= availableQuantity(selectedProduct)"
               class="bg-gray-200 hover:bg-green-100 text-green-700 rounded-full w-8 h-8 flex items-center justify-center"
               :class="
-                selectedProduct.requestedQuantity >=
-                availableQuantity(selectedProduct)
+                modalQuantity >= availableQuantity(selectedProduct)
                   ? 'opacity-50 cursor-not-allowed'
                   : ''
               "
@@ -178,12 +190,17 @@
           </div>
         </div>
 
+        <!-- زر إضافة للسلة في البوب أب -->
         <button
           @click="addToCart"
           class="bg-gradient-to-l from-[#AFDBB0] to-[#0074AF] text-white text-base px-8 py-3 rounded-full shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2 mx-auto"
-          :disabled="availableQuantity(selectedProduct) === 0"
+          :disabled="
+            availableQuantity(selectedProduct) === 0 ||
+            (authStore.user && authStore.user.role === 'admin')
+          "
           :class="
-            availableQuantity(selectedProduct) === 0
+            availableQuantity(selectedProduct) === 0 ||
+            (authStore.user && authStore.user.role === 'admin')
               ? 'bg-gray-400 cursor-not-allowed opacity-60'
               : ''
           "
@@ -191,6 +208,9 @@
           <font-awesome-icon icon="cart-shopping" />
           <span v-if="availableQuantity(selectedProduct) === 0"
             >نفذت الكمية</span
+          >
+          <span v-else-if="authStore.user && authStore.user.role === 'admin'"
+            >غير متاح للأدمن</span
           >
           <span v-else>إضافة للسلة</span>
         </button>
@@ -208,9 +228,9 @@
           icon="circle-check"
           class="text-green-500 text-xl sm:text-2xl"
         />
-        <span class="text-green-700 font-bold truncate"
-          >تمت إضافة {{ addedProductName }} للسلة بنجاح!</span
-        >
+        <span class="text-green-700 font-bold truncate">
+          تمت إضافة {{ addedProductName }} للسلة بنجاح!
+        </span>
       </div>
     </transition>
 
@@ -251,47 +271,62 @@ const props = defineProps({
 });
 
 const productsStore = useProductsStore();
-onMounted(() => {
-  productsStore.fetchProducts();
-  // اجعل المنتجات متاحة عالمياً للسلة
-  window.productsStore = productsStore;
-});
-
 const cartStore = useCartStore();
 const authStore = useAuthStore();
 
 const productsPerRow = 4;
 const visibleCount = ref(productsPerRow);
 
+// حماية عند التحميل الأول حتى لو products undefined
 const filteredProducts = computed(() => {
-  let source = productsStore.products;
+  // تأكد أن المنتجات مصفوفة وليس undefined
+  let source = Array.isArray(productsStore.filteredProducts)
+    ? productsStore.filteredProducts
+    : [];
+  // تصفية حسب التصنيف
   if (props.selectedCategory !== "الكل") {
     source = source.filter(
       (product) =>
+        product &&
         product.category &&
         (product.category.name === props.selectedCategory ||
           product.category === props.selectedCategory)
     );
   }
-  return source.map((product) => ({
-    ...product,
-    isDiscounted: !!product.discountPrice,
-  }));
+  // استبعاد المنتجات المخفضة
+  return source.filter(
+    (product) =>
+      product &&
+      !(
+        product.offer &&
+        product.offer.active &&
+        product.offer.discountValue > 0 &&
+        product.offer.discountQuantity > 0
+      )
+  );
 });
 
+// حماية نفسية: لو filteredProducts رجع undefined أو null
 const displayedProducts = computed(() =>
-  filteredProducts.value
-    .filter((product) => product && product._id)
-    .slice(0, visibleCount.value)
+  Array.isArray(filteredProducts.value)
+    ? filteredProducts.value
+        .filter((product) => product && product._id)
+        .slice(0, visibleCount.value)
+    : []
 );
 
 const selectedProduct = ref(null);
+const modalQuantity = ref(1); // استخدمه بدل requestedQuantity
+
 const showAddedPopup = ref(false);
 const addedProductName = ref("");
-
 const toastMessage = ref("");
 const showToast = ref(false);
-const toastType = ref("success"); // success, error, info
+const toastType = ref("success");
+
+onMounted(() => {
+  productsStore.fetchProducts();
+});
 
 function triggerToast(message, type = "success") {
   toastMessage.value = message;
@@ -304,14 +339,13 @@ function triggerToast(message, type = "success") {
 
 const openModal = (product) => {
   if (!product) return;
-  selectedProduct.value = {
-    ...product, // product.quantity here is the original stock
-    requestedQuantity: 1, // New property for modal input quantity
-  };
+  selectedProduct.value = { ...product };
+  modalQuantity.value = 1;
 };
 
 const closeModal = () => {
   selectedProduct.value = null;
+  modalQuantity.value = 1;
 };
 
 const addToCart = async () => {
@@ -322,77 +356,67 @@ const addToCart = async () => {
   if (!selectedProduct.value) return;
 
   const currentProduct = selectedProduct.value;
-  const modalInputQuantity = currentProduct.requestedQuantity || 1;
+  const modalInputQuantity = modalQuantity.value || 1;
 
-  const isDiscounted = !!currentProduct.discountPrice;
-  const maxStock = isDiscounted
-    ? currentProduct.offer?.discountQuantity || 0
-    : currentProduct.quantity || 0;
+  const maxStock = currentProduct.quantity || 0;
 
-  const existingSpecificItemInCart = cartStore.cartItems.find((item) => {
-    const itemProductId = item.product?._id || item.productId || item._id;
-    return (
-      itemProductId === currentProduct._id &&
-      item.price === (currentProduct.discountPrice || currentProduct.price) &&
-      !!item.isDiscounted === isDiscounted
-    );
-  });
-
-  const quantityOfThisSpecificItemAlreadyInCart = existingSpecificItemInCart
-    ? existingSpecificItemInCart.quantity
+  // تحقق من الكمية في السلة
+  const inCart = Array.isArray(cartStore.cartItems)
+    ? cartStore.cartItems
+        .filter((item) => {
+          const itemProductId = item.product?._id || item.productId || item._id;
+          return itemProductId === currentProduct._id && !item.isDiscounted;
+        })
+        .reduce((sum, item) => sum + (item.quantity || 0), 0)
     : 0;
 
-  const totalSameTypeInCart =
-    quantityOfThisSpecificItemAlreadyInCart + modalInputQuantity;
-
-  if (totalSameTypeInCart > maxStock) {
-    const remainingCanAdd = maxStock - quantityOfThisSpecificItemAlreadyInCart;
+  if (modalInputQuantity + inCart > maxStock) {
     triggerToast(
-      `لا يمكنك إضافة هذا العدد من المنتج "${currentProduct.name}" ` +
-        (remainingCanAdd > 0
-          ? `يمكنك فقط إضافة ${remainingCanAdd} من هذا النوع حالياً.`
-          : `الكمية المطلوبة غير متاحة حالياً لهذا النوع.`),
+      `الكمية المطلوبة غير متوفرة! يمكنك إضافة فقط ${
+        maxStock - inCart
+      } من هذا المنتج.`,
       "error"
     );
     return;
   }
 
-  if (existingSpecificItemInCart) {
-    await cartStore.updateQuantity(
-      existingSpecificItemInCart,
-      existingSpecificItemInCart.quantity + modalInputQuantity
-    );
+  const price = currentProduct.price;
+
+  const result = await cartStore.addToCart(
+    currentProduct._id,
+    modalInputQuantity,
+    price,
+    false // ليس مخفض
+  );
+
+  if (result && result.success === true) {
+    closeModal();
+    showAddedPopup.value = true;
+    addedProductName.value = currentProduct.name;
+    setTimeout(() => {
+      showAddedPopup.value = false;
+    }, 3000);
+    await cartStore.fetchCart();
   } else {
-    await cartStore.addToCart(
-      currentProduct._id,
-      modalInputQuantity,
-      currentProduct.discountPrice || currentProduct.price,
-      isDiscounted
+    triggerToast(
+      result && result.message
+        ? result.message
+        : "حدث خطأ أثناء إضافة المنتج للسلة",
+      "error"
     );
   }
-
-  await cartStore.fetchCart();
-  showAddedPopup.value = true;
-  addedProductName.value = currentProduct.name;
-  closeModal();
-  setTimeout(() => {
-    showAddedPopup.value = false;
-  }, 3000);
 };
 
 const showMore = () => {
   visibleCount.value += productsPerRow;
 };
 
-// دالة خاصة بالمنتجات العادية فقط
 const availableQuantity = (product) => {
   if (!product) return 0;
-  if (!cartStore.cartItems) return product.quantity || 0;
-  // تحقق فقط من الكمية الأصلية (الحقيقية) بغض النظر عن أي خصومات
+  if (!Array.isArray(cartStore.cartItems)) return product.quantity || 0;
   const totalInCart = cartStore.cartItems
     .filter((item) => {
       const itemProductId = item.product?._id || item.productId || item._id;
-      // فقط المنتجات العادية (وليس المخفضة)
       return itemProductId === product._id && !item.isDiscounted;
     })
     .reduce((sum, item) => sum + (item.quantity || 0), 0);

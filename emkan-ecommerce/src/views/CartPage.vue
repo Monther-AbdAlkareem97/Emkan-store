@@ -40,19 +40,18 @@
           <div class="flex items-center gap-4">
             <img
               :src="
-                getProduct(item.product?._id || item.productId || item._id)
-                  ?.image
-                  ? getProduct(
-                      item.product?._id || item.productId || item._id
-                    ).image.startsWith('http')
-                    ? getProduct(
-                        item.product?._id || item.productId || item._id
-                      ).image
-                    : 'http://localhost:5000/' +
-                      getProduct(
-                        item.product?._id || item.productId || item._id
-                      ).image
-                  : '/img/unnamed.webp'
+                (() => {
+                  const product = getProduct(
+                    item.product?._id || item.productId || item._id
+                  );
+                  if (!product?.image) return '/img/unnamed.webp';
+                  if (
+                    product.image.startsWith('http') ||
+                    product.image.startsWith('/uploads')
+                  )
+                    return product.image;
+                  return '/uploads/' + product.image;
+                })()
               "
               :alt="
                 getProduct(item.product?._id || item.productId || item._id)
@@ -60,6 +59,7 @@
               "
               class="w-20 h-20 object-contain rounded-xl border shadow"
             />
+
             <div>
               <h3 class="font-bold text-lg text-gray-800 mb-1">
                 {{

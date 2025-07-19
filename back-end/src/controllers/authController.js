@@ -123,6 +123,7 @@ export const logout = async (req, res) => {
 // جلب جميع المستخدمين (مثال لصلاحية الأدمن)
 export const getUsers = async (req, res) => {
   try {
+    // استثناء كلمة المرور والريفريش توكن من النتيجة
     const users = await User.find().select("-password -refreshToken");
     res.json(users);
   } catch (err) {
